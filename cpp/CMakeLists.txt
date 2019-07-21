@@ -25,9 +25,9 @@ endif()
 # set(BUILD_WRITE 0 CACHE BOOL "Build 'write' executable for neural net training data (deprecated)")
 set(BUILD_MCTS 1 CACHE BOOL "Build 'katago' for GTP engine and other tools (you probably want this)")
 set(USE_OPENCL_BACKEND 0 CACHE BOOL "Use OpenCL backend")
-set(USE_CUDA_BACKEND 0 CACHE BOOL "Use CUDA backend")
+set(USE_CUDA_BACKEND 1 CACHE BOOL "Use CUDA backend")
 set(USE_TCMALLOC 0 CACHE BOOL "Use TCMalloc")
-set(NO_GIT_REVISION 0 CACHE BOOL "Disable embedding the git revision into the compiled exe")
+set(NO_GIT_REVISION 1 CACHE BOOL "Disable embedding the git revision into the compiled exe")
 set(Boost_USE_STATIC_LIBS_ON 0 CACHE BOOL "Compile against boost statically instead of dynamically")
 
 #------------------------------------------------------------------------------------
