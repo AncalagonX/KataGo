@@ -595,16 +595,17 @@ bool Search::getNodeValues(const SearchNode& node, ReportedSearchValues& values)
   return true;
 }
 
-double Search::getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const {
+double Search::getScoreUtility(const SearchNode& node, double scoreMeanSum, double scoreMeanSqSum, double weightSum) const {
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
   double scoreStdev = getScoreStdev(scoreMean, scoreMeanSq);
   double staticScoreValue = ScoreValue::expectedWhiteScoreValue(scoreMean,scoreStdev,0.0,2.0,rootBoard);
   double dynamicScoreValue = ScoreValue::expectedWhiteScoreValue(scoreMean,scoreStdev,recentScoreCenter,1.0,rootBoard);
-  return staticScoreValue * searchParams.staticScoreUtilityFactor + dynamicScoreValue * searchParams.dynamicScoreUtilityFactor;
+  return staticScoreValue * searchParams.staticScoreUtilityFactor + dynamicScoreValue * getdynamicScoreUtilityFactor(node);
+  //return staticScoreValue * searchParams.staticScoreUtilityFactor + dynamicScoreValue * searchParams.dynamicScoreUtilityFactor;
 }
 
-double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const {
+double Search::getScoreUtilityDiff(const SearchNode& node, double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const {
   double scoreMean = scoreMeanSum / weightSum;
   double scoreMeanSq = scoreMeanSqSum / weightSum;
   double scoreStdev = getScoreStdev(scoreMean, scoreMeanSq);
@@ -614,12 +615,13 @@ double Search::getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, d
   double dynamicScoreValueDiff =
     ScoreValue::expectedWhiteScoreValue(scoreMean + delta,scoreStdev,recentScoreCenter,1.0,rootBoard)
     -ScoreValue::expectedWhiteScoreValue(scoreMean,scoreStdev,recentScoreCenter,1.0,rootBoard);
-  return staticScoreValueDiff * searchParams.staticScoreUtilityFactor + dynamicScoreValueDiff * searchParams.dynamicScoreUtilityFactor;
+  return staticScoreValueDiff * searchParams.staticScoreUtilityFactor + dynamicScoreValueDiff * getdynamicScoreUtilityFactor(node);
+  //return staticScoreValueDiff * searchParams.staticScoreUtilityFactor + dynamicScoreValueDiff * searchParams.dynamicScoreUtilityFactor;
 }
 
-double Search::getUtilityFromNN(const NNOutput& nnOutput) const {
+double Search::getUtilityFromNN(const SearchNode& node, const NNOutput& nnOutput) const {
   double resultUtility = getResultUtilityFromNN(nnOutput, searchParams);
-  return resultUtility + getScoreUtility(nnOutput.whiteScoreMean, nnOutput.whiteScoreMeanSq, 1.0);
+  return resultUtility + getScoreUtility(node, nnOutput.whiteScoreMean, nnOutput.whiteScoreMeanSq, 1.0);
 }
 
 double Search::getRootUtility() const {
@@ -855,16 +857,6 @@ void Search::beginSearch(Logger& logger) {
   if(rootBoard.x_size > nnXLen || rootBoard.y_size > nnYLen)
     throw StringError("Search got from NNEval nnXLen = " + Global::intToString(nnXLen) +
                       " nnYLen = " + Global::intToString(nnYLen) + " but was asked to search board with larger x or y size");
-
-  //If we're being asked to search from a position where the game is over, clear all the history state that had us
-  //believe the game was over and do a normal search
-  if(rootHistory.isGameFinished) {
-    clearSearch();
-    Rules rules = rootHistory.rules;
-    rootHistory.clear(rootBoard,rootPla,rules,rootHistory.encorePhase);
-    rootKoHashTable->recompute(rootHistory);
-  }
-
   rootBoard.checkConsistency();
 
   numSearchesBegun++;
@@ -995,7 +987,7 @@ void Search::recursivelyRecomputeStats(SearchNode& node, SearchThread& thread, b
       assert(isRoot);
     }
     else {
-      double scoreUtility = getScoreUtility(scoreMeanSum, scoreMeanSqSum, weightSum);
+      double scoreUtility = getScoreUtility(node, scoreMeanSum, scoreMeanSqSum, weightSum);
 
       double newUtility = resultUtilitySum / weightSum + scoreUtility;
       double newUtilitySum = newUtility * weightSum;
@@ -1256,8 +1248,8 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
   double weightSum = child->stats.weightSum;
   double weightSqSum = child->stats.weightSqSum;
   child->statsLock.clear(std::memory_order_release);
-
-  radiusBuf = 2.0 * (searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor);
+  //radiusBuf = 2.0 * (searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor);
+  radiusBuf = 2.0 * (searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + getdynamicScoreUtilityFactor(parent));
   lcbBuf = -radiusBuf;
   if(weightSum <= 0.0)
     return;
@@ -1270,7 +1262,7 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
 
   double utilityNoBonus = utilitySum / weightSum;
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
-  double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+  double utilityDiff = getScoreUtilityDiff(parent, scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
   double utilityWithBonus = utilityNoBonus + utilityDiff;
   double selfUtility = parent.nextPla == P_WHITE ? utilityWithBonus : -utilityWithBonus;
 
@@ -1281,6 +1273,16 @@ void Search::getSelfUtilityLCBAndRadius(const SearchNode& parent, const SearchNo
   lcbBuf = selfUtility - radius;
   radiusBuf = radius;
 }
+
+double Search::getdynamicScoreUtilityFactor(const SearchNode& node) const
+{
+	if (node.nextPla == P_BLACK)
+	{
+		return searchParams.dynamicScoreUtilityFactorB;
+	}
+	return searchParams.dynamicScoreUtilityFactor;
+}
+
 
 double Search::getExploreSelectionValue(
   double nnPolicyProb, int64_t totalChildVisits, int64_t childVisits,
@@ -1397,7 +1399,7 @@ double Search::getExploreSelectionValue(const SearchNode& parent, const SearchNo
     //Tiny adjustment for passing
     double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
     if(endingScoreBonus != 0)
-      childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+      childUtility += getScoreUtilityDiff(parent, scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
   }
 
   //When multithreading, totalChildVisits could be out of sync with childVisits, so if they provably are, then fix that up
@@ -1408,8 +1410,9 @@ double Search::getExploreSelectionValue(const SearchNode& parent, const SearchNo
   if(childVirtualLosses > 0) {
     //totalChildVisits += childVirtualLosses; //Should get better thread dispersal without this
     childVisits += childVirtualLosses;
-    double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
-    double virtualLossUtility = (parent.nextPla == P_WHITE ? -utilityRadius : utilityRadius);
+    //double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
+	double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + getdynamicScoreUtilityFactor(parent);
+	double virtualLossUtility = (parent.nextPla == P_WHITE ? -utilityRadius : utilityRadius);
     double virtualLossVisitFrac = (double)childVirtualLosses / childVisits;
     childUtility = childUtility + (virtualLossUtility - childUtility) * virtualLossVisitFrac;
   }
@@ -1454,7 +1457,7 @@ int64_t Search::getReducedPlaySelectionVisits(const SearchNode& parent, const Se
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
   double childUtility = utilitySum / weightSum;
   if(endingScoreBonus != 0)
-    childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    childUtility += getScoreUtilityDiff(parent, scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
 
   int64_t desiredVisits = (int64_t)ceil(sqrt(nnPolicyProb * totalChildVisits * searchParams.rootDesiredPerChildVisitsCoeff));
   for(int i = 0; i<desiredVisits; i++) {
@@ -1483,14 +1486,15 @@ double Search::getFpuValueForChildrenAssumeVisited(const SearchNode& node, Playe
     parentUtility = utilitySum / weightSum;
   }
   else {
-    parentUtility = getUtilityFromNN(*node.nnOutput);
+    parentUtility = getUtilityFromNN(node, *node.nnOutput);
   }
 
   double fpuValue;
   {
     double fpuReductionMax = isRoot ? searchParams.rootFpuReductionMax : searchParams.fpuReductionMax;
     double fpuLossProp = isRoot ? searchParams.rootFpuLossProp : searchParams.fpuLossProp;
-    double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
+    //double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + searchParams.dynamicScoreUtilityFactor;
+	double utilityRadius = searchParams.winLossUtilityFactor + searchParams.staticScoreUtilityFactor + getdynamicScoreUtilityFactor(node);
 
     double reduction = fpuReductionMax * sqrt(policyProbMassVisited);
     fpuValue = pla == P_WHITE ? parentUtility - reduction : parentUtility + reduction;
@@ -1721,7 +1725,7 @@ void Search::recomputeNodeStats(SearchNode& node, SearchThread& thread, int numV
     double scoreMeanSq = (double)node.nnOutput->whiteScoreMeanSq;
     double utility =
       getResultUtility(winProb, noResultProb, searchParams)
-      + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
+      + getScoreUtility(node, scoreMean, scoreMeanSq, 1.0);
 
     winValueSum += winProb * desiredWeight;
     noResultValueSum += noResultProb * desiredWeight;
@@ -1764,7 +1768,7 @@ void Search::runSinglePlayout(SearchThread& thread) {
 void Search::addLeafValue(SearchNode& node, double winValue, double noResultValue, double scoreMean, double scoreMeanSq, int32_t virtualLossesToSubtract, bool isCertain) {
   double utility =
     getResultUtility(winValue, noResultValue, searchParams)
-    + getScoreUtility(scoreMean, scoreMeanSq, 1.0);
+    + getScoreUtility(node, scoreMean, scoreMeanSq, 1.0);
 
   double newWeightSq = isCertain ? 0.001 : 1.0;
 
@@ -1998,7 +2002,7 @@ void Search::printRootEndingScoreValueBonus(ostream& out) const {
 
     double utilityNoBonus = utilitySum / weightSum;
     double endingScoreBonus = getEndingWhiteScoreBonus(*rootNode,child);
-    double utilityDiff = getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+    double utilityDiff = getScoreUtilityDiff(*child, scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
     double utilityWithBonus = utilityNoBonus + utilityDiff;
 
     out << Location::toString(child->prevMoveLoc,rootBoard) << " " << Global::strprintf(
@@ -2116,7 +2120,7 @@ AnalysisData Search::getAnalysisDataOfSingleChild(
   data.numVisits = numVisits;
   if(weightSum <= 1e-30) {
     data.utility = fpuValue;
-    data.scoreUtility = getScoreUtility(parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
+    data.scoreUtility = getScoreUtility(*child, parentScoreMean,parentScoreMean*parentScoreMean+parentScoreStdev*parentScoreStdev,1.0);
     data.resultUtility = fpuValue - data.scoreUtility;
     data.winLossValue = searchParams.winLossUtilityFactor == 1.0 ? parentWinLossValue + (fpuValue - parentUtility) : 0.0;
     data.scoreMean = parentScoreMean;
@@ -2336,7 +2340,6 @@ void Search::printTree(ostream& out, const SearchNode* node, PrintTreeOptions op
     );
     data.weightFactor = NAN;
   }
-  perspective = (perspective != P_BLACK && perspective != P_WHITE) ? node->nextPla : perspective;
   printTreeHelper(out, node, options, prefix, 0, 0, data, perspective);
 }
 

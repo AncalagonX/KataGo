@@ -284,9 +284,10 @@ private:
 
   void computeRootValues(Logger& logger);
 
-  double getScoreUtility(double scoreMeanSum, double scoreMeanSqSum, double weightSum) const;
-  double getScoreUtilityDiff(double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const;
-  double getUtilityFromNN(const NNOutput& nnOutput) const;
+  double getScoreUtility(const SearchNode& node, double scoreMeanSum, double scoreMeanSqSum, double weightSum) const;
+  double getScoreUtilityDiff(const SearchNode& node, double scoreMeanSum, double scoreMeanSqSum, double weightSum, double delta) const;
+  double getUtilityFromNN(const SearchNode& node, const NNOutput& nnOutput) const;
+  double getdynamicScoreUtilityFactor(const SearchNode& node) const;
 
   //Parent must be locked
   double getEndingWhiteScoreBonus(const SearchNode& parent, const SearchNode* child) const;

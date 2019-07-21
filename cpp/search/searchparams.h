@@ -8,6 +8,7 @@ struct SearchParams {
   double winLossUtilityFactor;     //Scaling for [-1,1] value for winning/losing
   double staticScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at 0.
   double dynamicScoreUtilityFactor; //Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at recent estimated expected score.
+  double dynamicScoreUtilityFactorB; //BLACK - Scaling for a [-1,1] "scoreValue" for having more/fewer points, centered at recent estimated expected score.
   double dynamicScoreCenterZeroWeight; //Adjust dynamic score center this proportion of the way towards zero, capped at a reasonable amount.
   double noResultUtilityForWhite; //Utility of having a no-result game (simple ko rules or nonterminating territory encore)
   double drawEquivalentWinsForWhite; //Consider a draw to be this many wins and one minus this many losses.
