@@ -57,3 +57,7 @@ cmake_install.cmake
 GPATH
 GRTAGS
 GTAGS
+/.vs/slnx.sqlite
+/.vs/ProjectSettings.json
+/.vs/KataGo/v16/Browse.VC.opendb
+/.vs/KataGo/v16/Browse.VC.db
