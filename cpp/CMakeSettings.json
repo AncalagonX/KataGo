@@ -20,6 +20,16 @@
           "name": "CUDA_SDK_ROOT_DIR",
           "value": "D:/CUDA/v10.0",
           "type": "PATH"
+        },
+        {
+          "name": "ZLIB_LIBRARY",
+          "value": "C:/local/Zlib/zlib-msvc14-x64/1.2.11.7795/build/native/lib_release/zlib.lib",
+          "type": "FILEPATH"
+        },
+        {
+          "name": "ZLIB_INCLUDE_DIR",
+          "value": "C:/local/Zlib/zlib-msvc14-x64/1.2.11.7795/build/native/include",
+          "type": "PATH"
         }
       ],
       "cmakeToolchain": ""
