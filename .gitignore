@@ -57,3 +57,7 @@ cmake_install.cmake
 GPATH
 GRTAGS
 GTAGS
+/.vs/config/applicationhost.config
+/.vs/KataGo2020/v15
+/.vs/ProjectSettings.json
+/.vs/slnx.sqlite
