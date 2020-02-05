@@ -514,7 +514,11 @@ void Search::runWholeSearch(Logger& logger, std::atomic<bool>& shouldStopNow, bo
     //Right now, just always use the recommended time.
     maxTime = std::min(tcRec,maxTime);
   }
-
+  maxTime = 17;
+  if (rootHistory.moveHistory.size() < 30)
+  {
+      maxTime = maxTime / 3 + maxTime * 2 / 3 * rootHistory.moveHistory.size() / 30.0f;
+  }
   {
     //Possibly reduce computation time, for human friendliness
     if(rootHistory.moveHistory.size() >= 1 && rootHistory.moveHistory[rootHistory.moveHistory.size()-1].loc == Board::PASS_LOC) {
@@ -535,8 +539,8 @@ void Search::runWholeSearch(Logger& logger, std::atomic<bool>& shouldStopNow, bo
   beginSearch(logger);
   int64_t numNonPlayoutVisits = numRootVisits();
 
-  auto searchLoop = [this,&timer,&numPlayoutsShared,numNonPlayoutVisits,&logger,&shouldStopNow,maxVisits,maxPlayouts,maxTime](int threadIdx) {
-    SearchThread* stbuf = new SearchThread(threadIdx,*this,&logger);
+  auto searchLoop = [this, &timer, &numPlayoutsShared, numNonPlayoutVisits, &logger, &shouldStopNow, maxVisits, maxPlayouts, maxTime, pondering](int threadIdx) {
+      SearchThread* stbuf = new SearchThread(threadIdx,*this,&logger);
 
     int64_t numPlayouts = numPlayoutsShared.load(std::memory_order_relaxed);
     try {
@@ -545,7 +549,50 @@ void Search::runWholeSearch(Logger& logger, std::atomic<bool>& shouldStopNow, bo
           (numPlayouts >= 2 && maxTime < 1.0e12 && timer.getSeconds() >= maxTime) ||
           (numPlayouts >= maxPlayouts) ||
           (numPlayouts + numNonPlayoutVisits >= maxVisits);
+        //if (!pondering && ((numPlayouts % 100) == 0) && timer.getSeconds() > (maxTime / 2) && timer.getSeconds() < maxTime)
+        if (!pondering && ((numPlayouts % 100) == 0) && timer.getSeconds() >= 0.60 && timer.getSeconds() < maxTime)
+        {
+            // check if second Node can reach best in visits
+            double visitsPerSecond = (double)(numPlayouts + numNonPlayoutVisits) / timer.getSeconds();
+            double remainingVisits = (maxTime - timer.getSeconds()) * visitsPerSecond;
+            int64_t mostvisits = 0;
+            int64_t secondmostvisits = 0;
+            //shouldStop = shouldStop || search->numRootVisits()
+            SearchNode& node = *rootNode;
+            int numChildren = node.numChildren;
+            //Store up basic visit counts
+            for (int i = 0; i < numChildren; i++) {
+                SearchNode* child = node.children[i];
+                int64_t childVisits = 0;
+                try {
+                    childVisits = child->stats.visits;
+                }
+                catch (exception e) {};
+                if (childVisits > secondmostvisits) secondmostvisits = childVisits;
+                if (secondmostvisits > mostvisits)
+                {
+                    int64_t temp = mostvisits;
+                    mostvisits = secondmostvisits;
+                    secondmostvisits = temp;
+                }
+            }
+            if (mostvisits > secondmostvisits)
+            {
+                // remainingVisits * 2 for savetyness (LCB not mostvisited automaticly best move)
+                if (secondmostvisits + (int64_t)remainingVisits * 2 < mostvisits)
+                {
+                    //I COMMENTED OUT PETGO's 2x VISITS EARLY OUT
+                    //shouldStop = true;
+                    //logger.write(string("Saved s: " + Global::doubleToString(maxTime - timer.getSeconds())));
+                }
+                if (((mostvisits / (secondmostvisits + 1)) > 7) && mostvisits > 200)
+                {
+                    shouldStop = true;
+                    logger.write(string("--------> Early out saved: " + Global::doubleToString(maxTime - timer.getSeconds()) + " seconds"));
 
+                }
+            }
+        }
         if(shouldStop || shouldStopNow.load(std::memory_order_relaxed)) {
           shouldStopNow.store(true,std::memory_order_relaxed);
           break;

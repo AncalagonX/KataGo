@@ -30,6 +30,7 @@ set_property(CACHE USE_BACKEND PROPERTY STRINGS "" CUDA OPENCL)
 set(USE_TCMALLOC 0 CACHE BOOL "Use TCMalloc")
 set(NO_GIT_REVISION 0 CACHE BOOL "Disable embedding the git revision into the compiled exe")
 set(Boost_USE_STATIC_LIBS_ON 0 CACHE BOOL "Compile against boost statically instead of dynamically")
+set(USE_BACKEND "CUDA")
 
 #------------------------------------------------------------------------------------
 
@@ -262,7 +263,9 @@ if(BUILD_MCTS)
     if((NOT CUDNN_INCLUDE_DIR))
       message(ERROR "${ColorBoldRed} cudnn.h was NOT found, specify CUDNN_INCLUDE_DIR to indicate where it is. ${ColorReset}")
     endif()
-    find_library(CUDNN_LIBRARY libcudnn.so PATHS /usr/local/cuda/lib64 /opt/cuda/lib64)
+    #find_library(CUDNN_LIBRARY libcudnn.so PATHS /usr/local/cuda/lib64 /opt/cuda/lib64)
+    find_library(CUDNN_LIBRARY cudnn.lib "D:/CUDA/v10.0/lib/x64")
+    find_library(CUDA_CUBLAS_LIBRARIES cublas.lib "D:/CUDA/v10.0/lib/x64")
     include_directories(SYSTEM ${CUDA_INCLUDE_DIRS} ${CUDNN_INCLUDE_DIR}) #SYSTEM is for suppressing some compiler warnings in thrust libraries
     target_link_libraries(katago ${CUDNN_LIBRARY} ${CUDA_CUBLAS_LIBRARIES} ${CUDA_LIBRARIES})
   elseif(USE_BACKEND STREQUAL "OPENCL")

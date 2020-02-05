@@ -647,6 +647,17 @@ struct GTPEngine {
 
     //Play faster when winning
     double searchFactor = PlayUtils::getSearchFactor(searchFactorWhenWinningThreshold,searchFactorWhenWinning,params,recentWinLossValues,pla);
+    //Fast end of game from petgo
+    /**
+    if (laststddev < 8.0 && laststddev > 0)
+    {
+        searchFactor = searchFactor / 2;
+        if (laststddev < 5.0)
+        {
+            searchFactor = searchFactor / 2;
+        }
+    }
+    **/
     lastSearchFactor = searchFactor;
 
     Loc moveLoc;
