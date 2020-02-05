@@ -514,11 +514,13 @@ void Search::runWholeSearch(Logger& logger, std::atomic<bool>& shouldStopNow, bo
     //Right now, just always use the recommended time.
     maxTime = std::min(tcRec,maxTime);
   }
+  /**
   maxTime = 17;
   if (rootHistory.moveHistory.size() < 30)
   {
       maxTime = maxTime / 3 + maxTime * 2 / 3 * rootHistory.moveHistory.size() / 30.0f;
   }
+  **/
   {
     //Possibly reduce computation time, for human friendliness
     if(rootHistory.moveHistory.size() >= 1 && rootHistory.moveHistory[rootHistory.moveHistory.size()-1].loc == Board::PASS_LOC) {
