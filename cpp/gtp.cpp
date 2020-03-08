@@ -1224,14 +1224,15 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     }
 
     else if(command == "name") {
-      response = "KataGo";
+      response = "versiononly";
     }
 
     else if(command == "version") {
-      if(overrideVersion.size() > 0)
-        response = overrideVersion;
-      else
-        response = Version::getKataGoVersion();
+        if (overrideVersion.size() > 0)
+            //response = overrideVersion;
+            response = "More human than human. Deadly. Tyrell Corporation.";
+      //else
+        //response = Version::getKataGoVersion();
     }
 
     else if(command == "known_command") {

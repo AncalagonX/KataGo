@@ -514,8 +514,9 @@ void Search::runWholeSearch(Logger& logger, std::atomic<bool>& shouldStopNow, bo
     //Right now, just always use the recommended time.
     maxTime = std::min(tcRec,maxTime);
   }
+  
+  //maxTime = 10;
   /**
-  maxTime = 17;
   if (rootHistory.moveHistory.size() < 30)
   {
       maxTime = maxTime / 3 + maxTime * 2 / 3 * rootHistory.moveHistory.size() / 30.0f;
