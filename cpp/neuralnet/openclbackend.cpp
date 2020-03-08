@@ -83,14 +83,17 @@ struct LoadedModel {
   LoadedModel& operator=(const LoadedModel&) = delete;
 };
 
-LoadedModel* NeuralNet::loadModelFile(const string& file, int modelFileIdx) {
-  (void)modelFileIdx;
+LoadedModel* NeuralNet::loadModelFile(const string& file) {
   LoadedModel* loadedModel = new LoadedModel(file);
   return loadedModel;
 }
 
 void NeuralNet::freeLoadedModel(LoadedModel* loadedModel) {
   delete loadedModel;
+}
+
+string NeuralNet::getModelName(const LoadedModel* loadedModel) {
+  return loadedModel->modelDesc.name;
 }
 
 int NeuralNet::getModelVersion(const LoadedModel* loadedModel) {
@@ -2311,8 +2314,12 @@ ComputeHandle* NeuralNet::createComputeHandle(
   bool inputsUseNHWC,
   int gpuIdxForThisThread
 ) {
-  if(logger != NULL)
+  if(logger != NULL) {
     logger->write("OpenCL backend: Model version " + Global::intToString(loadedModel->modelDesc.version));
+    logger->write(
+      "OpenCL backend: Model name: " + loadedModel->modelDesc.name
+    );
+  }
 
   //Current implementation always tolerates excess nn len
   (void)requireExactNNLen;
@@ -2322,6 +2329,19 @@ ComputeHandle* NeuralNet::createComputeHandle(
 
 void NeuralNet::freeComputeHandle(ComputeHandle* handle) {
   delete handle;
+}
+
+//------------------------------------------------------------------------------
+
+void NeuralNet::printDevices() {
+  vector<DeviceInfo> devices = DeviceInfo::getAllDeviceInfosOnSystem(NULL);
+  for(int i = 0; i<devices.size(); i++) {
+    const DeviceInfo& device = devices[i];
+    string msg =
+      "Found OpenCL Device " + Global::intToString(device.gpuIdx) + ": " + device.name + " (" + device.vendor + ")" +
+      " (score " + Global::intToString(device.defaultDesirability) + ")";
+    cout << msg << endl;
+  }
 }
 
 //--------------------------------------------------------------

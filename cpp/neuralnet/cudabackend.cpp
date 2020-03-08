@@ -2391,14 +2391,17 @@ struct LoadedModel {
   LoadedModel& operator=(const LoadedModel&) = delete;
 };
 
-LoadedModel* NeuralNet::loadModelFile(const string& file, int modelFileIdx) {
-  (void)modelFileIdx;
+LoadedModel* NeuralNet::loadModelFile(const string& file) {
   LoadedModel* loadedModel = new LoadedModel(file);
   return loadedModel;
 }
 
 void NeuralNet::freeLoadedModel(LoadedModel* loadedModel) {
   delete loadedModel;
+}
+
+string NeuralNet::getModelName(const LoadedModel* loadedModel) {
+  return loadedModel->modelDesc.name;
 }
 
 int NeuralNet::getModelVersion(const LoadedModel* loadedModel) {
@@ -2755,6 +2758,9 @@ ComputeHandle* NeuralNet::createComputeHandle(
       " useFP16 = " + Global::boolToString(useFP16) +
       " useNHWC = " + Global::boolToString(useNHWC)
     );
+    logger->write(
+      "Cuda backend: Model name: " + loadedModel->modelDesc.name
+    );
   }
 
   ComputeHandle* gpuHandle = new ComputeHandle(
@@ -2766,6 +2772,19 @@ ComputeHandle* NeuralNet::createComputeHandle(
 void NeuralNet::freeComputeHandle(ComputeHandle* gpuHandle) {
   delete gpuHandle;
 }
+
+//------------------------------------------------------------------------------
+
+void NeuralNet::printDevices() {
+  int numDevices = 0;
+  cudaGetDeviceCount(&numDevices);
+  for(int i = 0; i<numDevices; i++) {
+    cudaDeviceProp prop;
+    cudaGetDeviceProperties(&prop, i);
+    cout << "Found CUDA device " << i << ": " << prop.name << endl;
+  }
+}
+
 
 //------------------------------------------------------------------------------
 
