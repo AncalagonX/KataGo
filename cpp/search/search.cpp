@@ -562,7 +562,7 @@ void Search::runWholeSearch(
                     //shouldStop = true;
                     //logger.write(string("Saved s: " + Global::doubleToString(maxTime - timer.getSeconds())));
                 }
-                if (((mostvisits / (secondmostvisits + 1)) > 7) && mostvisits > 200)
+                if (((mostvisits / (secondmostvisits + 1)) > 7) && mostvisits > 1200)
                 {
                     shouldStop = true;
                     logger.write(string("--------> Early out saved: " + Global::doubleToString(maxTime - timer.getSeconds()) + " seconds"));
@@ -1263,10 +1263,32 @@ double Search::getExploreSelectionValue(
 
   while(child->statsLock.test_and_set(std::memory_order_acquire));
   int64_t childVisits = child->stats.visits;
-  double utilitySum = child->stats.utilitySum;
-  double scoreMeanSum = child->stats.scoreMeanSum;
-  double scoreMeanSqSum = child->stats.scoreMeanSqSum;
-  double weightSum = child->stats.weightSum;
+  double utilitySum;
+  double scoreMeanSum;
+  double scoreMeanSqSum;
+  double weightSum;
+  double expectedScore;
+  //if (parent.nextPla != rootPla) {
+      utilitySum = (child->stats.utilitySum);
+      scoreMeanSum = (child->stats.scoreMeanSum);
+      scoreMeanSqSum = (child->stats.scoreMeanSqSum);
+      weightSum = (child->stats.weightSum);
+      expectedScore = scoreMeanSum / weightSum;
+  //}
+  if (parent.nextPla == rootPla && rootPla != P_WHITE) {
+      expectedScore = -1.0 * expectedScore;
+      }
+  if (parent.nextPla == rootPla) {
+      if (expectedScore >= 0.0) {
+          utilitySum = (1.0 / ((child->stats.utilitySum) + 0.000001)) * (1.0 / (expectedScore + 0.000001));
+          //utilitySum = -0.1 * (child->stats.utilitySum);
+      }
+      scoreMeanSum = 1.0 * (1.0 / ((child->stats.scoreMeanSum) + 0.000001));
+      scoreMeanSqSum = 1.0 * (1.0 / ((child->stats.scoreMeanSqSum) + 0.000001));
+      if (expectedScore >= 0.0) {
+          weightSum = 1.0 / ((child->stats.weightSum) + 0.000001);
+      }
+  }
   int32_t childVirtualLosses = child->virtualLosses;
   child->statsLock.clear(std::memory_order_release);
 
@@ -1282,7 +1304,7 @@ double Search::getExploreSelectionValue(
     //Tiny adjustment for passing
     double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
     if(endingScoreBonus != 0)
-      childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+            childUtility += (getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus));
   }
 
   //When multithreading, totalChildVisits could be out of sync with childVisits, so if they provably are, then fix that up
@@ -1345,7 +1367,7 @@ int64_t Search::getReducedPlaySelectionVisits(
   double endingScoreBonus = getEndingWhiteScoreBonus(parent,child);
   double childUtility = utilitySum / weightSum;
   if(endingScoreBonus != 0)
-    childUtility += getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus);
+          childUtility += (getScoreUtilityDiff(scoreMeanSum, scoreMeanSqSum, weightSum, endingScoreBonus));
 
   double childVisitsWeRetrospectivelyWanted = getExploreSelectionValueInverse(
     bestChildExploreSelectionValue, nnPolicyProb, totalChildVisits, childUtility, parent.nextPla

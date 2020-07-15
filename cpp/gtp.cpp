@@ -50,9 +50,9 @@ static const vector<string> knownCommands = {
   "clear_cache",
 
   "showboard",
-  "fixed_handicap",
-  "place_free_handicap",
-  "set_free_handicap",
+  //"fixed_handicap",
+  //"place_free_handicap",
+  //"set_free_handicap",
   "time_settings",
   "kgs-time_settings",
   "time_left",
