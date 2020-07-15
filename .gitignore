@@ -59,3 +59,10 @@ cmake_install.cmake
 GPATH
 GRTAGS
 GTAGS
+*.ipch
+/.vs/config/applicationhost.config
+/.vs/KataGo2020/v15/.suo
+/.vs/KataGo2020/v15/Browse.VC.db
+/.vs/KataGo2020/v15/Browse.VC.opendb
+/.vs/ProjectSettings.json
+/.vs/slnx.sqlite
