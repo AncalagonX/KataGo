@@ -521,7 +521,7 @@ void Search::runWholeSearch(
   searchBegun.store(true,std::memory_order_release);
   int64_t numNonPlayoutVisits = getRootVisits();
 
-  auto searchLoop = [this,&timer,&numPlayoutsShared,numNonPlayoutVisits,&logger,&shouldStopNow,maxVisits,maxPlayouts,maxTime](int threadIdx) {
+  auto searchLoop = [this,&timer,&numPlayoutsShared,numNonPlayoutVisits,&logger,&shouldStopNow,maxVisits,maxPlayouts,maxTime,pondering](int threadIdx) {
     SearchThread* stbuf = new SearchThread(threadIdx,*this,&logger);
 
     int64_t numPlayouts = numPlayoutsShared.load(std::memory_order_relaxed);
@@ -531,6 +531,55 @@ void Search::runWholeSearch(
           (numPlayouts >= 2 && maxTime < 1.0e12 && timer.getSeconds() >= maxTime) ||
           (numPlayouts >= maxPlayouts) ||
           (numPlayouts + numNonPlayoutVisits >= maxVisits);
+
+        if (!pondering && timer.getSeconds() <= 0.60 && timer.getSeconds() < maxTime) {
+            shouldStop = false;
+        }
+
+        //if (!pondering && ((numPlayouts % 100) == 0) && timer.getSeconds() > (maxTime / 2) && timer.getSeconds() < maxTime)
+        if (!pondering && ((numPlayouts % 50) == 0) && timer.getSeconds() >= 0.60 && timer.getSeconds() < maxTime)
+        {
+            // check if second Node can reach best in visits
+            double visitsPerSecond = (double)(numPlayouts + numNonPlayoutVisits) / timer.getSeconds();
+            double remainingVisits = (maxTime - timer.getSeconds()) * visitsPerSecond;
+            int64_t mostvisits = 0;
+            int64_t secondmostvisits = 0;
+            //shouldStop = shouldStop || search->numRootVisits()
+            SearchNode& node = *rootNode;
+            int numChildren = node.numChildren;
+            //Store up basic visit counts
+            for (int i = 0; i < numChildren; i++) {
+                SearchNode* child = node.children[i];
+                int64_t childVisits = 0;
+                try {
+                    childVisits = child->stats.visits;
+                }
+                catch (exception e) {};
+                if (childVisits > secondmostvisits) secondmostvisits = childVisits;
+                if (secondmostvisits > mostvisits)
+                {
+                    int64_t temp = mostvisits;
+                    mostvisits = secondmostvisits;
+                    secondmostvisits = temp;
+                }
+            }
+            if (mostvisits > secondmostvisits)
+            {
+                // remainingVisits * 2 for savetyness (LCB not mostvisited automaticly best move)
+                if (secondmostvisits + (int64_t)remainingVisits * 2 < mostvisits)
+                {
+                    //I COMMENTED OUT PETGO's 2x VISITS EARLY OUT
+                    //shouldStop = true;
+                    //logger.write(string("Saved s: " + Global::doubleToString(maxTime - timer.getSeconds())));
+                }
+                if (((mostvisits / (secondmostvisits + 1)) > 7) && mostvisits > 100)
+                {
+                    shouldStop = true;
+                    logger.write(string("--------> Early out saved: " + Global::doubleToString(maxTime - timer.getSeconds()) + " seconds"));
+
+                }
+            }
+        }
 
         if(shouldStop || shouldStopNow.load(std::memory_order_relaxed)) {
           shouldStopNow.store(true,std::memory_order_relaxed);
