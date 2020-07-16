@@ -2408,6 +2408,7 @@ void Board::printBoard(ostream& out, const Board& board, Loc markLoc, const vect
     out << "MoveNum: " << hist->size() << " ";
   out << "HASH: " << board.pos_hash << "\n";
   bool showCoords = board.x_size <= 50 && board.y_size <= 50;
+  /**
   if(showCoords) {
     const char* xChar = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
     out << "  ";
@@ -2455,6 +2456,7 @@ void Board::printBoard(ostream& out, const Board& board, Loc markLoc, const vect
     }
     out << "\n";
   }
+  **/
   out << "\n";
 }
 

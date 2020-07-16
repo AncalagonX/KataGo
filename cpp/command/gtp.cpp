@@ -1487,6 +1487,7 @@ int MainCmds::gtp(int argc, const char* const* argv) {
       response = "2";
     }
 
+    /**
     else if(command == "name") {
       response = "KataGo";
     }
@@ -1496,6 +1497,19 @@ int MainCmds::gtp(int argc, const char* const* argv) {
         response = overrideVersion;
       else
         response = Version::getKataGoVersion();
+    }
+    **/
+
+    else if (command == "name") {
+        response = "versiononly";
+    }
+
+    else if (command == "version") {
+        if (overrideVersion.size() > 0)
+            //response = overrideVersion;
+            response = "More human than human. Deadly. Tyrell Corporation.";
+        //else
+          //response = Version::getKataGoVersion();
     }
 
     else if(command == "known_command") {
