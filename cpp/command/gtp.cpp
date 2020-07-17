@@ -10,6 +10,9 @@
 #include "../program/play.h"
 #include "../command/commandline.h"
 #include "../main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctime>
 
 using namespace std;
 
@@ -21,6 +24,7 @@ static const vector<string> knownCommands = {
   "known_command",
   "list_commands",
   "quit",
+  "kgs-chat",
 
   //GTP extension - specify "boardsize X:Y" or "boardsize X Y" for non-square sizes
   //rectangular_boardsize is an alias for boardsize, intended to make it more evident that we have such support
@@ -285,9 +289,9 @@ static void printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvaluator
   out << bot->getRootHist().rules << "\n";
   out << "Time taken: " << timeTaken << "\n";
   out << "Root visits: " << search->getRootVisits() << "\n";
-  out << "New playouts: " << search->lastSearchNumPlayouts << "\n";
-  out << "NN rows: " << nnEval->numRowsProcessed() << endl;
-  out << "NN batches: " << nnEval->numBatchesProcessed() << endl;
+  out << "New playouts: " << search->lastSearchNumPlayouts << "\n" << "\n";
+  //out << "NN rows: " << nnEval->numRowsProcessed() << endl;
+  //out << "NN batches: " << nnEval->numBatchesProcessed() << endl;
   out << "NN avg batch size: " << nnEval->averageProcessedBatchSize() << endl;
   if(search->searchParams.playoutDoublingAdvantage != 0)
     out << "PlayoutDoublingAdvantage: " << (
@@ -441,6 +445,7 @@ struct GTPEngine {
     }
 
     string searchRandSeed;
+    srand((unsigned)time(0));
     if(cfg.contains("searchRandSeed"))
       searchRandSeed = cfg.getString("searchRandSeed");
     else
@@ -1483,8 +1488,66 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     bool maybeStartPondering = false;
     string response;
 
-    if(command == "protocol_version") {
-      response = "2";
+    if (command == "protocol_version") {
+        response = "2";
+    }
+
+    //if (command == "kgs-chat") {
+    //    response = "RESPONSEHERE";
+    //}
+
+    /**
+
+    else if (command.find("kgs-chat") == 0) {
+        if (pieces.size() == 3) {
+            if (Global::toLower(pieces[0]) == "game")
+            {
+                try
+                {
+                    response = "Command not supported! Try again."; //default response
+                    if (Global::toLower(pieces[2]) == "wr") {
+                        ostringstream chat;
+                        response = "WR command response."; //default response
+                        //response = response_save;
+                        chat << " (";
+                        if (engine->bot->getSearch()->getRootVisits() > 0)
+                        {
+                            // here move analysis
+                            ostringstream xout;
+                            xout << " (";
+                            engine->bot->getSearch()->printPV(xout, engine->bot->getSearch()->rootNode, analysisPVLen);
+                            xout << ")";
+                            response = response_save + xout.str();
+                        }
+
+                    }
+                }
+            }
+        }
+    }
+    **/
+
+    else if (command.find("kgs-chat") == 0) {
+        int result = 1 + (rand() % 3);
+        if (Global::toLower(pieces[0]) == "game") {
+            string username = pieces[1];
+            if (username.find(":") != std::string::npos) {
+                username = username.substr(0, username.length() - 1);
+            }
+            if (username != "checkingusername") {
+                response = "Hi " + username + " in game";
+            }
+            if ((username == "checkingusername") && (result <= 0)) {
+                response = "NORESPONSE";
+            }
+            if ((username == "checkingusername") && (result >= 1)) {
+                response = "result is " + to_string(result);
+            }
+        }
+        if (Global::toLower(pieces[0]) == "private") {
+            string username = pieces[1];
+            response = "Hi " + username + " in private messages";
+        }
     }
 
     /**

@@ -532,6 +532,22 @@ void Search::runWholeSearch(
           (numPlayouts >= maxPlayouts) ||
           (numPlayouts + numNonPlayoutVisits >= maxVisits);
 
+        if ((rootHistory.moveHistory.size() >= 180) && (numPlayouts >= (maxPlayouts / 2))) {
+            shouldStop = true;
+        }
+
+        if ((rootHistory.moveHistory.size() >= 200) && (numPlayouts >= (maxPlayouts / 4))) {
+            shouldStop = true;
+        }
+
+        if ((rootHistory.moveHistory.size() >= 250) && (numPlayouts >= (maxPlayouts / 8))) {
+            shouldStop = true;
+        }
+
+        if ((rootHistory.moveHistory.size() <= 20) && (numPlayouts >= (maxPlayouts / 4))) {
+            shouldStop = true;
+        }
+
         if (!pondering && timer.getSeconds() <= 0.60 && timer.getSeconds() < maxTime) {
             shouldStop = false;
         }
@@ -563,8 +579,9 @@ void Search::runWholeSearch(
                     secondmostvisits = temp;
                 }
             }
-            if (mostvisits > secondmostvisits)
-            {
+
+            //if (mostvisits > secondmostvisits) //I'M NOT SURE WHY THIS IF STATEMENT IS IN HERE
+            //{
                 // remainingVisits * 2 for savetyness (LCB not mostvisited automaticly best move)
                 if (secondmostvisits + (int64_t)remainingVisits * 2 < mostvisits)
                 {
@@ -572,12 +589,17 @@ void Search::runWholeSearch(
                     //shouldStop = true;
                     //logger.write(string("Saved s: " + Global::doubleToString(maxTime - timer.getSeconds())));
                 }
-                if (((mostvisits / (secondmostvisits + 1)) > 5) && mostvisits >= 200)
+                if (((mostvisits / (secondmostvisits + 1)) > 4) && mostvisits >= 100)
                 {
-                    shouldStop = true;
                     logger.write(string("--------> Early out saved: " + Global::doubleToString(maxTime - timer.getSeconds()) + " seconds"));
+                    shouldStop = true;
 
                 }
+            //}
+            int toptwovisit_diff = mostvisits - secondmostvisits;
+            int maxplayout_diff = maxPlayouts - numPlayouts;
+            if (toptwovisit_diff > maxplayout_diff) {
+                shouldStop = true;
             }
         }
 
