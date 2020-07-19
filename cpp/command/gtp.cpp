@@ -13,8 +13,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctime>
+#include <iostream>     // std::cout
+#include <algorithm>    // std::find
+#include <vector>       // std::vector
 
 using namespace std;
+double global_scorelead;
+int global_movenum;
+string send_message = "NORESPONSE";
+bool tell_score = false;
 
 static const vector<string> knownCommands = {
   //Basic GTP commands
@@ -286,6 +293,7 @@ static bool shouldResign(
 static void printGenmoveLog(ostream& out, const AsyncBot* bot, const NNEvaluator* nnEval, Loc moveLoc, double timeTaken, Player perspective) {
   const Search* search = bot->getSearch();
   Board::printBoard(out, bot->getRootBoard(), moveLoc, &(bot->getRootHist().moveHistory));
+  global_movenum = bot->getRootHist().moveHistory.size();
   out << bot->getRootHist().rules << "\n";
   out << "Time taken: " << timeTaken << "\n";
   out << "Root visits: " << search->getRootVisits() << "\n";
@@ -854,6 +862,7 @@ struct GTPEngine {
       int64_t visits = bot->getSearch()->getRootVisits();
       double winrate = 0.5 * (1.0 + (values.winValue - values.lossValue));
       double leadForPrinting = lead;
+      global_scorelead = lead;
       //Print winrate from desired perspective
       if(perspective == P_BLACK || (perspective != P_BLACK && perspective != P_WHITE && pla == P_BLACK)) {
         winrate = 1.0 - winrate;
@@ -1154,6 +1163,9 @@ struct GTPEngine {
   void setParams(SearchParams p) {
     params = p;
     bot->setParams(params);
+  }
+  void doSearch(string searchterm) {
+
   }
 };
 
@@ -1528,25 +1540,88 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     **/
 
     else if (command.find("kgs-chat") == 0) {
+        //vector<string> pieces_lowercase = std::transform(pieces.begin(), pieces.end(), pieces.begin(), ::tolower);
+        //std::vector<string> pieces_lowercase(pieces);
+        //std::transform(std::begin(pieces_lowercase), std::end(pieces_lowercase), std::begin(pieces_lowercase), ::tolower);
+        response = "NORESPONSE";
         int result = 1 + (rand() % 3);
+        double leadForPrinting = global_scorelead;
+        int int_lead = leadForPrinting;
+        double int_lead_plus_05 = int_lead;
+        if (int_lead_plus_05 >= 0.01) {
+            int_lead_plus_05 += 0.5f;
+        }
+        if (int_lead_plus_05 <= 0.01) {
+            int_lead_plus_05 -= 0.5f;
+        }
+        string MsgScoreLead = Global::strprintf("%.1f", abs(int_lead_plus_05));
         if (Global::toLower(pieces[0]) == "game") {
             string username = pieces[1];
             if (username.find(":") != std::string::npos) {
                 username = username.substr(0, username.length() - 1);
             }
-            if (username != "checkingusername") {
-                response = "Hi " + username + " in game";
-            }
-            if ((username == "checkingusername") && (result <= 0)) {
+            
+            //if (username != "checkingusername") {
+            //    response = "Hi " + username + " in game";
+            //}
+            if (username == "checkingusername") {
                 response = "NORESPONSE";
             }
-            if ((username == "checkingusername") && (result >= 1)) {
-                response = "result is " + to_string(result);
+            if ((username == "checkingusername") && ((global_movenum == 2) || (global_movenum == 3))) {
+                response = "NEW: Type the word 'score' into game chat here to see a score estimate, or send a private chat to me.";
             }
+            //if ((username == "checkingusername") && (result >= 1)) {
+            //    response = "result is " + to_string(result);
+            //}
+
+            if ((global_movenum == 4) || (global_movenum == 5)) {
+                response = "score";
+            }
+            
+            if ((std::find(std::begin(pieces), std::end(pieces), "score") != std::end(pieces)) || (tell_score == true) || ((global_movenum == 6) || (global_movenum == 7))) {
+                tell_score = false;
+                if (int_lead_plus_05 >= 0.01) {
+                    response = "W+" + MsgScoreLead + " points.";
+                }
+                if (int_lead_plus_05 <= -0.01) {
+                    response = "B+" + MsgScoreLead + " points.";
+                }
+                if ((leadForPrinting <= 0.01) && (leadForPrinting >= -0.01)) {
+                    response = "Play a stone, and then ask again.";
+                }
+            }
+
+            /**
+            if ((Global::toLower(pieces[2]) == "score") || (Global::toLower(pieces[3]) == "score")) {
+                if (int_lead_plus_05 >= 0.01) {
+                    response = "White is winning by approximately " + MsgScoreLead + " points.";
+                }
+                if (int_lead_plus_05 <= -0.01) {
+                    response = "White is losing by approximately " + MsgScoreLead + " points.";
+                }
+                if ((leadForPrinting <= 0.01) && (leadForPrinting >= -0.01)) {
+                    response = "Play a stone, and then ask again.";
+                }
+            }
+            **/
         }
         if (Global::toLower(pieces[0]) == "private") {
             string username = pieces[1];
-            response = "Hi " + username + " in private messages";
+            response = "Hello, " + username + ".";
+            if (std::find(std::begin(pieces), std::end(pieces), "score") != std::end(pieces)) {
+                if (int_lead_plus_05 >= 0.01) {
+                    response = "W+" + MsgScoreLead + " points.";
+                }
+                if (int_lead_plus_05 <= -0.01) {
+                    response = "B+" + MsgScoreLead + " points.";
+                }
+                if ((leadForPrinting <= 0.01) && (leadForPrinting >= -0.01)) {
+                    response = "Play a stone, and then ask again.";
+                }
+            }
+            if (std::find(std::begin(pieces), std::end(pieces), "x0score") != std::end(pieces)) {
+                tell_score = true;
+            }
         }
     }
 

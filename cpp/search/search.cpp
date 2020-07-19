@@ -589,7 +589,7 @@ void Search::runWholeSearch(
                     //shouldStop = true;
                     //logger.write(string("Saved s: " + Global::doubleToString(maxTime - timer.getSeconds())));
                 }
-                if (((mostvisits / (secondmostvisits + 1)) > 4) && mostvisits >= 100)
+                if (((mostvisits / (secondmostvisits + 1)) > 4) && mostvisits >= 200)
                 {
                     logger.write(string("--------> Early out saved: " + Global::doubleToString(maxTime - timer.getSeconds()) + " seconds"));
                     shouldStop = true;
