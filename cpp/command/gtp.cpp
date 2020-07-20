@@ -22,6 +22,10 @@ double global_scorelead;
 int global_movenum;
 string send_message = "NORESPONSE";
 bool tell_score = false;
+int previous_score;
+bool auto_score_initialized = false;
+bool pass_seen = false;
+string best_search_string = "";
 
 static const vector<string> knownCommands = {
   //Basic GTP commands
@@ -882,6 +886,10 @@ struct GTPEngine {
       cerr << " PV ";
       bot->getSearch()->printPVForMove(cerr,bot->getSearch()->rootNode, moveLoc, analysisPVLen);
       cerr << endl;
+      //std::string best_search_string2 = bot->getSearch()->printPVForMove(cerr, bot->getSearch()->rootNode, moveLoc, analysisPVLen).str();
+      std::ostringstream best_search_string2;
+      bot->getSearch()->printPVForMove(best_search_string2, bot->getSearch()->rootNode, moveLoc, analysisPVLen);
+      best_search_string = best_search_string2.str();
     }
 
     if(logSearchInfo) {
@@ -1548,12 +1556,37 @@ int MainCmds::gtp(int argc, const char* const* argv) {
         double leadForPrinting = global_scorelead;
         int int_lead = leadForPrinting;
         double int_lead_plus_05 = int_lead;
+        
+        int temp_int_lead = int_lead / 10;
+        if (leadForPrinting >= 0.01) {
+            temp_int_lead += 1;
+        }
+        if (leadForPrinting <= 0.01) {
+            temp_int_lead -= 1;
+        }
+
+        if (((leadForPrinting >= 0.01) || (leadForPrinting <= 0.01)) && (global_movenum >= 7) && (auto_score_initialized == false)) {
+            previous_score = temp_int_lead;
+            auto_score_initialized = true;
+        }
+
+        if ((previous_score != temp_int_lead) && (auto_score_initialized == true)) {
+            tell_score = true;
+            previous_score = temp_int_lead;
+        }
+
         if (int_lead_plus_05 >= 0.01) {
             int_lead_plus_05 += 0.5f;
         }
         if (int_lead_plus_05 <= 0.01) {
             int_lead_plus_05 -= 0.5f;
         }
+
+        if ((best_search_string.find("pass") != std::string::npos) && (pass_seen == false)) {
+            pass_seen = true;
+            tell_score = true;
+        }
+
         string MsgScoreLead = Global::strprintf("%.1f", abs(int_lead_plus_05));
         if (Global::toLower(pieces[0]) == "game") {
             string username = pieces[1];
@@ -1717,7 +1750,9 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     }
 
     else if(command == "clear_board") {
-      engine->clearBoard();
+        auto_score_initialized = false;
+        pass_seen = false;
+        engine->clearBoard();
     }
 
     else if(command == "komi") {
