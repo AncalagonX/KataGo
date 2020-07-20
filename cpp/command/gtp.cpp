@@ -16,6 +16,7 @@
 #include <iostream>     // std::cout
 #include <algorithm>    // std::find
 #include <vector>       // std::vector
+#include <boost/filesystem.hpp> // For sentinel files
 
 using namespace std;
 double global_scorelead;
@@ -26,6 +27,7 @@ int previous_score;
 bool auto_score_initialized = false;
 bool pass_seen = false;
 string best_search_string = "";
+std::string cfg_sentinel_file = "sentinel_KataNexus.quit";
 
 static const vector<string> knownCommands = {
   //Basic GTP commands
@@ -1710,6 +1712,10 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     }
 
     else if(command == "boardsize" || command == "rectangular_boardsize") {
+      if (boost::filesystem::exists(cfg_sentinel_file)) {
+          //gtp_printf(id, "Sentinel file detected. Exiting LZ.");
+          exit(EXIT_SUCCESS);
+      }
       int newXSize = 0;
       int newYSize = 0;
       bool suc = false;
@@ -1750,6 +1756,10 @@ int MainCmds::gtp(int argc, const char* const* argv) {
     }
 
     else if(command == "clear_board") {
+    if (boost::filesystem::exists(cfg_sentinel_file)) {
+        //gtp_printf(id, "Sentinel file detected. Exiting LZ.");
+        exit(EXIT_SUCCESS);
+    }
         auto_score_initialized = false;
         pass_seen = false;
         engine->clearBoard();
