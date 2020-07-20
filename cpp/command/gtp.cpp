@@ -1577,10 +1577,10 @@ int MainCmds::gtp(int argc, const char* const* argv) {
             previous_score = temp_int_lead;
         }
 
-        if (int_lead_plus_05 >= 0.01) {
+        if (leadForPrinting >= 0.01) {
             int_lead_plus_05 += 0.5f;
         }
-        if (int_lead_plus_05 <= 0.01) {
+        if (leadForPrinting <= -0.01) {
             int_lead_plus_05 -= 0.5f;
         }
 
